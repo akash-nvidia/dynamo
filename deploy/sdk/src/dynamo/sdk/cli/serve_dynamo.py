@@ -174,7 +174,7 @@ def main(
         server_context.worker_index = worker_id
 
     @dynamo_worker()
-    async def worker(runtime: DistributedRuntime):
+    async def dyn_worker(runtime: DistributedRuntime):
         global dynamo_context
         dynamo_context["runtime"] = runtime
         if service_name and service_name != service.name:
@@ -203,23 +203,25 @@ def main(
 
             endpoints = []
             for name, endpoint in dynamo_endpoints.items():
-                td_endpoint = component.endpoint(name)
-                logger.debug(f"Registering endpoint '{name}'")
-                endpoints.append(td_endpoint)
-                # Bind an instance of inner to the endpoint
+                if DynamoTransport.DEFAULT in endpoint.transports:
+                    td_endpoint = component.endpoint(name)
+                    logger.debug(f"Registering endpoint '{name}' with DEFAULT transport")
+                    endpoints.append(td_endpoint)
+                    # Bind an instance of inner to the endpoint
             dynamo_context["component"] = component
             dynamo_context["endpoints"] = endpoints
             class_instance = service.inner()
             dynamo_handlers = []
             for name, endpoint in dynamo_endpoints.items():
-                bound_method = endpoint.func.__get__(class_instance)
-                # Only pass request type for now, use Any for response
-                # TODO: Handle an endpoint not having types
-                # TODO: Handle multiple endpoints in a single component
-                dynamo_wrapped_method = dynamo_endpoint(endpoint.request_type, Any)(
-                    bound_method
-                )
-                dynamo_handlers.append(dynamo_wrapped_method)
+                if DynamoTransport.DEFAULT in endpoint.transports:
+                    bound_method = endpoint.func.__get__(class_instance)
+                    # Only pass request type for now, use Any for response
+                    # TODO: Handle an endpoint not having types
+                    # TODO: Handle multiple endpoints in a single component
+                    dynamo_wrapped_method = dynamo_endpoint(endpoint.request_type, Any)(
+                        bound_method
+                    )
+                    dynamo_handlers.append(dynamo_wrapped_method)
             # Run startup hooks before setting up endpoints
             for name, member in vars(class_instance.__class__).items():
                 if callable(member) and getattr(
@@ -269,7 +271,7 @@ def main(
             raise
 
     # if the service has a FastAPI app, add the worker as an event handler
-    def web_worker():
+    async def web_worker():
         if not service.app:
             return
 
@@ -288,18 +290,15 @@ def main(
             logger.info(
                 f"Starting FastAPI server on {config.host}:{config.port} with routes: {added_routes}"
             )
-            server.run()
+            await server.serve()
         else:
             logger.warning("No API routes found, not starting FastAPI server")
-            # Keep the process running until interrupted
-            logger.info("Service is running, press Ctrl+C to stop")
-            while True:
-                try:
-                    # Sleep in small increments to respond to signals quickly
-                    time.sleep(0.1)
-                except KeyboardInterrupt:
-                    logger.info("Gracefully shutting down FastAPI process")
-                    break
+
+    # Helper to launch fastapi server and dynamo worker concurrently
+    async def run_concurrent_workers(tasks):
+        await asyncio.gather(*tasks)
+
+    worker_tasks = []
 
     uvloop.install()
     start_http_server = False
@@ -309,9 +308,11 @@ def main(
             start_http_server = True
             break
     if start_http_server:
-        web_worker()
-    else:
-        asyncio.run(worker())
+        worker_tasks.append(web_worker())
+
+    # Always start the dynamo worker, no reason not to
+    worker_tasks.append(dyn_worker())
+    asyncio.run(run_concurrent_workers(worker_tasks))
 
 
 if __name__ == "__main__":

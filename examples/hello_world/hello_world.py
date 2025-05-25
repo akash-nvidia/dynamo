@@ -126,9 +126,17 @@ class Frontend:
         logger.info(f"Frontend config message: {self.message}")
         logger.info(f"Frontend config port: {self.port}")
 
+    # Dummy endpoint to check if we can serve both concurrently
+    @endpoint()
+    async def generate(self, req: RequestType):
+        """Forward requests to backend."""
+        yield f"Response 1"
+        yield f"Response 2"
+        yield f"Response 3"
+
     # alternative syntax: @endpoint(transports=[DynamoTransport.HTTP])
     @api()
-    async def generate(self, request: RequestType):
+    async def generate_web(self, request: RequestType):
         """Stream results from the pipeline."""
         logger.info(f"Frontend received: {request.text}")
 

@@ -32,6 +32,7 @@ use super::{service_v2, RouteDoc};
 use axum::{
     extract::Path, http::Method, http::StatusCode, response::IntoResponse, routing::get, Router,
 };
+use dynamo_runtime::component::INSTANCE_ROOT_PATH;
 use dynamo_runtime::{DistributedRuntime, Runtime};
 use std::sync::Arc;
 
@@ -66,7 +67,7 @@ async fn health_namespace_handler(Path(namespace): Path<String>) -> impl IntoRes
         Ok(runtime) => {
             let drt = DistributedRuntime::from_settings(runtime).await.unwrap();
 
-            let target_key = format!("instances/{namespace}");
+            let target_key = format!("{INSTANCE_ROOT_PATH}/{namespace}");
             let kvpairs = drt
                 .etcd_client()
                 .unwrap()

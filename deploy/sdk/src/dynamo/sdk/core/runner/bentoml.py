@@ -74,6 +74,7 @@ class BentoServiceAdapter(ServiceMixin, ServiceInterface[T]):
         config: ServiceConfig,
         dynamo_config: Optional[DynamoConfig] = None,
         app: Optional[FastAPI] = None,
+        system_app: Optional[FastAPI] = None,
         **kwargs,
     ):
         name = service_cls.__name__
@@ -113,11 +114,9 @@ class BentoServiceAdapter(ServiceMixin, ServiceInterface[T]):
         )
 
         self._endpoints: Dict[str, BentoEndpoint] = {}
-        if not app:
-            self.app = FastAPI(title=name)
-        else:
-            self.app = app
-        register_liveness_probe(self.app, service_cls)
+        self.app = app or FastAPI(title=name)
+        self.system_app = system_app or FastAPI(title=f"{name}-system")
+        register_liveness_probe(self.system_app, service_cls)
         self._dependencies: Dict[str, "DependencyInterface"] = {}
         self._bentoml_service.config["dynamo"] = asdict(self._dynamo_config)
         self._api_endpoints: list[str] = []
@@ -265,6 +264,7 @@ class BentoDeploymentTarget(DeploymentTarget):
         config: ServiceConfig,
         dynamo_config: Optional[DynamoConfig] = None,
         app: Optional[FastAPI] = None,
+        system_app: Optional[FastAPI] = None,
         **kwargs,
     ) -> ServiceInterface[T]:
         """Create a BentoServiceAdapter with the given parameters"""
@@ -273,6 +273,7 @@ class BentoDeploymentTarget(DeploymentTarget):
             config=config,
             dynamo_config=dynamo_config,
             app=app,
+            system_app=system_app,
             **kwargs,
         )
 

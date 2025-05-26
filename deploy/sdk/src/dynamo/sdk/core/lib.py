@@ -56,6 +56,7 @@ def service(
     *,
     dynamo: Optional[Union[Dict[str, Any], DynamoConfig]] = None,
     app: Optional[FastAPI] = None,
+    system_app: Optional[FastAPI] = None,
     **kwargs: Any,
 ) -> Any:
     """Service decorator that's adapter-agnostic"""
@@ -79,6 +80,7 @@ def service(
             config=config,
             dynamo_config=dynamo_config,
             app=app,
+            system_app=system_app,
             **kwargs,
         )
 

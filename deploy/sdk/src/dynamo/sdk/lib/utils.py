@@ -18,10 +18,13 @@ import socket
 
 
 def get_host_port():
-    """Gets host and port for web worker from environment variables set at the top level by circus
-    """
-    # Check for web worker specific env vars first
-    # If port is 0, uvicorn and OS will find us a good random port
-    port = os.environ.get("DYN_WEB_WORKER_PORT", 0)
-    host = os.environ.get("DYN_WEB_WORKER_HOST", "0.0.0.0")
-    return host, int(port)
+    """Gets host and port from environment variables. Defaults to 0.0.0.0:8000."""
+    port = int(os.environ.get("DYNAMO_PORT", 8000))
+    host = os.environ.get("DYNAMO_HOST", "0.0.0.0")
+    return host, port
+
+def get_system_app_host_port():
+    """Gets host and port for system app from environment variables. Defaults to choosing a random port."""
+    port = int(os.environ.get("DYNAMO_SYSTEM_APP_PORT", 0))
+    host = os.environ.get("DYNAMO_SYSTEM_APP_HOST", "0.0.0.0")
+    return host, port

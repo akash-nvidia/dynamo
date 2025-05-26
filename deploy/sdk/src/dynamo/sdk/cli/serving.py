@@ -162,13 +162,14 @@ def clear_namespace(namespace: str) -> None:
 @inject(squeeze_none=True)
 def serve_dynamo_graph(
     bento_identifier: str | AnyService,
-    host: str | None = None,
-    port: int | None = None,
     working_dir: str | None = None,
     dependency_map: dict[str, str] | None = None,
     service_name: str = "",
     enable_local_planner: bool = False,
     target: TargetEnum = TargetEnum.DYNAMO,
+    system_app_port: Optional[int] = None,
+    system_app_host: Optional[str] = None,
+    enable_system_app: bool = False,
 ) -> CircusRunner:
     from dynamo.runtime.logging import configure_dynamo_logging
     from dynamo.sdk.cli.circus import create_arbiter, create_circus_watcher
@@ -200,11 +201,23 @@ def serve_dynamo_graph(
     if dependency_map is None:
         dependency_map = {}
 
-    # TODO: Only for testing, this will prevent any other dep services from getting started, relying entirely on configured deps in the runner-map
     standalone = False
     if service_name:
         logger.info(f"Service '{service_name}' running in standalone mode")
         standalone = True
+
+    # Signal downstream workers to start system app by setting DYNAMO_SYSTEM_APP_* env vars for each worker. They are respectively consumed in serve_dynamo.py
+    if enable_system_app:
+        env["DYNAMO_SYSTEM_APP_ENABLED"] = "true"
+        if system_app_port:
+            # Throw if not standalone mode. Should only be set in standalone mode.
+            # TODO: This might still cause issues if we are running in standalone, but have multiple workers, need to figure this one out
+            if not standalone:
+                raise ValueError("Specifying system app port is only supported in standalone mode (i.e --service-name is set)")
+            env["DYNAMO_SYSTEM_APP_PORT"] = str(system_app_port)
+        if system_app_host:
+            env["DYNAMO_SYSTEM_APP_HOST"] = system_app_host
+    
     if service_name and service_name != svc.name:
         svc = svc.find_dependent_by_name(service_name)
     num_workers, resource_envs = allocator.get_resource_envs(svc)
@@ -279,14 +292,7 @@ def serve_dynamo_graph(
             except json.JSONDecodeError as e:
                 logger.warning(f"Failed to parse DYNAMO_SERVICE_ENVS: {e}")
 
-        # Only setting this on the entrypoint service, should also be set on all standalone workers
-        if port:
-            # Check that when the port is explicitly set, the number of workers must be 1
-            if num_workers > 1:
-                raise ValueError("When port is explicitly set, the number of workers must be 1")
-            worker_env["DYN_WEB_WORKER_PORT"] = str(port)
-        if host:
-            worker_env["DYN_WEB_WORKER_HOST"] = host
+        # if system app port, host, and enable flag are defined, let's ensure we set the env vars 
 
 
         watcher = create_circus_watcher(

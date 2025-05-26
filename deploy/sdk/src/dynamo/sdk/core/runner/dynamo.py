@@ -76,6 +76,7 @@ class LocalService(ServiceMixin, ServiceInterface[T]):
         watcher: Optional[Watcher] = None,
         socket: Optional[CircusSocket] = None,
         app: Optional[FastAPI] = None,
+        system_app: Optional[FastAPI] = None,
     ):
         self._inner_cls = inner_cls
         self._config = config
@@ -88,6 +89,7 @@ class LocalService(ServiceMixin, ServiceInterface[T]):
         self._watcher = watcher
         self._socket = socket
         self.app = app or FastAPI(title=name)
+        self.system_app = system_app or FastAPI(title=f"{name}-system")
         self._dependencies: Dict[str, "DependencyInterface"] = {}
         self._endpoints: Dict[str, LocalEndpoint] = {}
         for field_name in dir(inner_cls):
@@ -99,7 +101,7 @@ class LocalService(ServiceMixin, ServiceInterface[T]):
             if isinstance(field, DependencyInterface):
                 self._dependencies[field_name] = field
         inner_instance = inner_cls()
-        register_liveness_probe(self.app, inner_instance)
+        register_liveness_probe(self.system_app, inner_instance)
 
     def find_dependent_by_name(self, name: str) -> "ServiceInterface":
         return self.all_services()[name]
@@ -219,6 +221,8 @@ class LocalDeploymentTarget(DeploymentTarget):
         service_cls: Type[T],
         config: ServiceConfig,
         dynamo_config: Optional[DynamoConfig] = None,
+        app: Optional[FastAPI] = None,
+        system_app: Optional[FastAPI] = None,
         **kwargs,
     ) -> ServiceInterface[T]:
         # Get parameters needed for creating a circus watcher

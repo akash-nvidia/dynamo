@@ -283,7 +283,8 @@ def main(
         if added_routes:
             # Configure uvicorn with graceful shutdown
             host, port = get_host_port()
-            config = uvicorn.Config(service.app, host=host, port=port, log_level="info")
+            # Pass None to uvicorn setting to unify log style
+            config = uvicorn.Config(service.app, host=host, port=port, log_config=None)
             server = uvicorn.Server(config)
 
             # Start the server with graceful shutdown handling

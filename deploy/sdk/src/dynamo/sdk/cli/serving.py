@@ -162,6 +162,8 @@ def clear_namespace(namespace: str) -> None:
 @inject(squeeze_none=True)
 def serve_dynamo_graph(
     bento_identifier: str | AnyService,
+    host: str | None = None,
+    port: int | None = None,
     working_dir: str | None = None,
     dependency_map: dict[str, str] | None = None,
     service_name: str = "",
@@ -276,6 +278,16 @@ def serve_dynamo_graph(
                         worker_env.update(service_args["envs"])
             except json.JSONDecodeError as e:
                 logger.warning(f"Failed to parse DYNAMO_SERVICE_ENVS: {e}")
+
+        # Only setting this on the entrypoint service, should also be set on all standalone workers
+        if port:
+            # Check that when the port is explicitly set, the number of workers must be 1
+            if num_workers > 1:
+                raise ValueError("When port is explicitly set, the number of workers must be 1")
+            worker_env["DYN_WEB_WORKER_PORT"] = str(port)
+        if host:
+            worker_env["DYN_WEB_WORKER_HOST"] = host
+
 
         watcher = create_circus_watcher(
             name=f"{namespace}_{svc.name}",

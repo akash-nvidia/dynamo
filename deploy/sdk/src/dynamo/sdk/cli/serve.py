@@ -170,8 +170,8 @@ def serve(
     serve_dynamo_graph(
         dynamo_pipeline,
         working_dir=working_dir_str,
-        # host=host,
-        # port=port,
+        host=host,
+        port=port,
         dependency_map=runner_map_dict,
         service_name=service_name,
         enable_local_planner=enable_local_planner,

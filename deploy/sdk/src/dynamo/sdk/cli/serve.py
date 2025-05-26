@@ -93,6 +93,11 @@ def serve(
         help="Enable the system app.",
         envvar="DYNAMO_SYSTEM_APP_ENABLED",
     ),
+    use_default_health_checks: bool = typer.Option(
+        False,
+        "--use-default-health-checks",
+        help="Use default liveness and readiness health checks if none are provided.",
+    ),
     working_dir: Optional[Path] = typer.Option(
         None,
         help="When loading from source code, specify the directory to find the Service instance",
@@ -185,8 +190,8 @@ def serve(
     serve_dynamo_graph(
         dynamo_pipeline,
         working_dir=working_dir_str,
-        host=host,
-        port=port,
+        # host=host,
+        # port=port,
         dependency_map=runner_map_dict,
         service_name=service_name,
         enable_local_planner=enable_local_planner,
@@ -194,4 +199,5 @@ def serve(
         system_app_port=system_app_port,
         system_app_host=system_app_host,
         enable_system_app=enable_system_app,
+        use_default_health_checks=use_default_health_checks,
     )

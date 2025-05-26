@@ -36,6 +36,7 @@ from dynamo.sdk import dynamo_context
 from dynamo.sdk.core.protocol.interface import DynamoTransport, LinkedServices
 from dynamo.sdk.lib.loader import find_and_load_service
 from dynamo.sdk.lib.utils import get_host_port, get_system_app_host_port
+from dynamo.sdk.core.runner.health import register_liveness_probe, register_readiness_probe
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +174,9 @@ def main(
     if worker_id is not None:
         server_context.worker_index = worker_id
 
+    # Instance of the inner class of the service should be the same across the dynamo_worker, web_worker, and system_app_worker
+    class_instance = service.inner()
+
     @dynamo_worker()
     async def dyn_worker(runtime: DistributedRuntime):
         global dynamo_context
@@ -210,7 +214,6 @@ def main(
                     # Bind an instance of inner to the endpoint
             dynamo_context["component"] = component
             dynamo_context["endpoints"] = endpoints
-            class_instance = service.inner()
             dynamo_handlers = []
             for name, endpoint in dynamo_endpoints.items():
                 if DynamoTransport.DEFAULT in endpoint.transports:
@@ -275,8 +278,6 @@ def main(
         if not service.app:
             return
 
-        # Create the class instance
-        class_instance = service.inner()
         # TODO: init hooks
         # Add API routes to the FastAPI app
         added_routes = add_fastapi_routes(service.app, service, class_instance)
@@ -298,9 +299,17 @@ def main(
     async def system_app_worker():
         if not service.system_app:
             raise ValueError("System app not defined for service")
+
+        # Register system endpoints
+        use_default_health_checks = os.environ.get("DYNAMO_SYSTEM_APP_USE_DEFAULT_HEALTH_CHECKS", "false").lower() == "true"
+        if use_default_health_checks:
+            logger.info("Using default health checks for liveness and readiness probes")
+        register_liveness_probe(service.system_app, class_instance, use_default=use_default_health_checks)
+        register_readiness_probe(service.system_app, class_instance, use_default=use_default_health_checks)
+        # readiness, etc...
+
         host, port = get_system_app_host_port()
         server = uvicorn.Server(uvicorn.Config(service.system_app, host=host, port=port, log_config=None))
-        # System routes added with call to register_liveness_probe
         logger.info(f"Starting system app on {host}:{port}")
         await server.serve()
 

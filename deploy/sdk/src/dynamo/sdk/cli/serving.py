@@ -170,6 +170,7 @@ def serve_dynamo_graph(
     system_app_port: Optional[int] = None,
     system_app_host: Optional[str] = None,
     enable_system_app: bool = False,
+    use_default_health_checks: bool = False,
 ) -> CircusRunner:
     from dynamo.runtime.logging import configure_dynamo_logging
     from dynamo.sdk.cli.circus import create_arbiter, create_circus_watcher
@@ -206,6 +207,7 @@ def serve_dynamo_graph(
         logger.info(f"Service '{service_name}' running in standalone mode")
         standalone = True
 
+    # TODO: We are signaling by setting env vars to downstream subprocesses. Let's pass flags on our invokation of serve_dynamo instead. That way the API is defined at the top level.
     # Signal downstream workers to start system app by setting DYNAMO_SYSTEM_APP_* env vars for each worker. They are respectively consumed in serve_dynamo.py
     if enable_system_app:
         env["DYNAMO_SYSTEM_APP_ENABLED"] = "true"
@@ -217,6 +219,10 @@ def serve_dynamo_graph(
             env["DYNAMO_SYSTEM_APP_PORT"] = str(system_app_port)
         if system_app_host:
             env["DYNAMO_SYSTEM_APP_HOST"] = system_app_host
+        # Only set use_default_health_checks if explicitly enabled
+        if use_default_health_checks:
+            env["DYNAMO_SYSTEM_APP_USE_DEFAULT_HEALTH_CHECKS"] = "true"
+            logger.info("Default health checks enabled for system app")
     
     if service_name and service_name != svc.name:
         svc = svc.find_dependent_by_name(service_name)
@@ -291,9 +297,6 @@ def serve_dynamo_graph(
                         worker_env.update(service_args["envs"])
             except json.JSONDecodeError as e:
                 logger.warning(f"Failed to parse DYNAMO_SERVICE_ENVS: {e}")
-
-        # if system app port, host, and enable flag are defined, let's ensure we set the env vars 
-
 
         watcher = create_circus_watcher(
             name=f"{namespace}_{svc.name}",

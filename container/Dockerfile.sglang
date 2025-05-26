@@ -136,9 +136,16 @@ RUN if [ "$ARCH" = "arm64" ]; then \
     fi
 
 # Install sglang
-ARG SGLANG_VERSION="0.4.6.post5"
+# TODO: NIXL transfer is currently broken as of https://github.com/sgl-project/sglang/commit/7513558074adc4c4015b68e2ae7cf719d3401d5d
+# Once this is fixed we will have to install from that commit until a new post is released
+ARG SGLANG_COMMIT="4d643f6c7a291c86de64a9e52eca526b2d99775d"
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install "sglang[all]==${SGLANG_VERSION}"
+    git clone https://github.com/sgl-project/sglang.git && \
+    cd sglang && \
+    git checkout ${SGLANG_COMMIT} && \
+    uv pip install -e "python[all]" && \
+    cd .. && \
+    rm -rf sglang
 
 # Common dependencies
 RUN --mount=type=bind,source=./container/deps/requirements.txt,target=/tmp/requirements.txt \

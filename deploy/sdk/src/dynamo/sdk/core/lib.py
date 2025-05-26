@@ -111,3 +111,20 @@ def get_liveness_handler(obj):
         if callable(fn) and getattr(fn, "__is_liveness_probe__", False):
             return fn
     return None
+
+
+def readiness(func: G) -> G:
+    """Decorator for readiness probe."""
+    if not callable(func):
+        raise TypeError("@readiness can only decorate callable methods")
+
+    func.__is_readiness_probe__ = True  # type: ignore
+    return func
+
+
+def get_readiness_handler(obj):
+    for attr in dir(obj):
+        fn = getattr(obj, attr)
+        if callable(fn) and getattr(fn, "__is_readiness_probe__", False):
+            return fn
+    return None

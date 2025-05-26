@@ -13,12 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct ForwardPassMetrics {
-    pub request_active_slots: u64,
-    pub request_total_slots: u64,
-    pub kv_active_blocks: u64,
-    pub kv_total_blocks: u64,
-}
+pub mod evictor;
+pub mod kv_manager;
+pub mod protocols;
+pub mod scheduler;
+pub mod sequence;

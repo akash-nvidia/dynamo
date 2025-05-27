@@ -14,7 +14,6 @@
 # limitations under the License.
 
 import os
-import socket
 
 
 def get_host_port():
@@ -22,6 +21,7 @@ def get_host_port():
     port = int(os.environ.get("DYNAMO_PORT", 8000))
     host = os.environ.get("DYNAMO_HOST", "0.0.0.0")
     return host, port
+
 
 def get_system_app_host_port():
     """Gets host and port for system app from environment variables. Defaults to choosing a random port."""

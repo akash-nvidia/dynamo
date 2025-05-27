@@ -215,7 +215,9 @@ def serve_dynamo_graph(
             # Throw if not standalone mode. Should only be set in standalone mode.
             # TODO: This might still cause issues if we are running in standalone, but have multiple workers, need to figure this one out
             if not standalone:
-                raise ValueError("Specifying system app port is only supported in standalone mode (i.e --service-name is set)")
+                raise ValueError(
+                    "Specifying system app port is only supported in standalone mode (i.e --service-name is set)"
+                )
             env["DYNAMO_SYSTEM_APP_PORT"] = str(system_app_port)
         if system_app_host:
             env["DYNAMO_SYSTEM_APP_HOST"] = system_app_host
@@ -223,7 +225,7 @@ def serve_dynamo_graph(
         if use_default_health_checks:
             env["DYNAMO_SYSTEM_APP_USE_DEFAULT_HEALTH_CHECKS"] = "true"
             logger.info("Default health checks enabled for system app")
-    
+
     if service_name and service_name != svc.name:
         svc = svc.find_dependent_by_name(service_name)
     num_workers, resource_envs = allocator.get_resource_envs(svc)

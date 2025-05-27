@@ -16,14 +16,16 @@
 #  Modifications Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES
 
 
-from typing import Any
+from typing import Any, Awaitable, Union
 
 from fastapi import FastAPI, Response
+
 
 # TODO: These defaults should be set by the provider. For now, I'm just adding them so that something is exposed when we do --use-default-health-checks
 def default_liveness_check() -> bool:
     """Default liveness check that always returns True."""
     return True
+
 
 def default_readiness_check() -> bool:
     """Default readiness check that always returns True."""
@@ -66,8 +68,8 @@ def register_liveness_probe(
             # Use decorated method if available, otherwise use default
             check_method = decorated_method if decorated_method else default_liveness_check
             # self needs to be bound so we need to use the instance of the inner
-            result = check_method()
-            if callable(getattr(result, "__await__", None)):
+            result: Union[bool, Awaitable[bool]] = check_method()
+            if isinstance(result, Awaitable):
                 result = await result
             return Response(status_code=200 if result else 503)
         except Exception as e:
@@ -110,8 +112,8 @@ def register_readiness_probe(
             # Use decorated method if available, otherwise use default
             check_method = decorated_method if decorated_method else default_readiness_check
             # self needs to be bound so we need to use the instance of the inner
-            result = check_method()
-            if callable(getattr(result, "__await__", None)):
+            result: Union[bool, Awaitable[bool]] = check_method()
+            if isinstance(result, Awaitable):
                 result = await result
             return Response(status_code=200 if result else 503)
         except Exception as e:

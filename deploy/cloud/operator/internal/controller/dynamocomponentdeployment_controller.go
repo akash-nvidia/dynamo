@@ -1416,6 +1416,11 @@ func (r *DynamoComponentDeploymentReconciler) generatePodTemplateSpec(ctx contex
 
 	args = append(args, "cd", "src", "&&", "uv", "run", "dynamo", "serve")
 
+	// ensure liveness and readiness probes are enabled for the dynamo components
+	args = append(args, "--system-app-port", "5000")
+	args = append(args, "--enable-system-app")
+	args = append(args, "--use-default-health-checks")
+
 	// todo : remove this line when https://github.com/ai-dynamo/dynamo/issues/345 is fixed
 	enableDependsOption := false
 	if len(opt.dynamoComponentDeployment.Spec.ExternalServices) > 0 && enableDependsOption {
@@ -1549,8 +1554,36 @@ func (r *DynamoComponentDeploymentReconciler) generatePodTemplateSpec(ctx contex
 				Name:          commonconsts.DynamoContainerPortName,
 				ContainerPort: int32(containerPort), // nolint: gosec
 			},
+			{
+				Protocol:      corev1.ProtocolTCP,
+				Name:          "health",
+				ContainerPort: int32(5000),
+			},
 		},
 		SecurityContext: mainContainerSecurityContext,
+	}
+
+	// Set default probes if none are provided
+	if livenessProbe == nil {
+		container.LivenessProbe = &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/healthz",
+					Port: intstr.FromString("health"),
+				},
+			},
+		}
+	}
+
+	if readinessProbe == nil {
+		container.ReadinessProbe = &corev1.Probe{
+			ProbeHandler: corev1.ProbeHandler{
+				HTTPGet: &corev1.HTTPGetAction{
+					Path: "/readyz",
+					Port: intstr.FromString("health"),
+				},
+			},
+		}
 	}
 
 	if opt.dynamoComponentDeployment.Spec.EnvFromSecret != nil {

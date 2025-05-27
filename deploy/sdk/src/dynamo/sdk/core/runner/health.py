@@ -31,9 +31,9 @@ def default_readiness_check() -> bool:
 
 
 def register_liveness_probe(
-    app: FastAPI, instance: Any, route: str = "/healthz/liveness", use_default: bool = False
+    app: FastAPI, instance: Any, route: str = "/healthz", use_default: bool = False
 ) -> None:
-    """Registers /healthz/liveness endpoint.
+    """Registers /healthz endpoint.
 
     If a method decorated with @liveness is found, uses that.
     Otherwise, if use_default is True, uses a default check that always returns 200.
@@ -43,7 +43,7 @@ def register_liveness_probe(
         app (FastAPI): The FastAPI application to register the liveness route on.
         instance (Any): The service or component instance to inspect for a @liveness-decorated method.
         route (str, optional): The URL path to register the liveness endpoint under.
-                               Defaults to "/healthz/liveness".
+                               Defaults to "/healthz".
         use_default (bool, optional): Whether to use default health check if no decorated method is found.
                                     Defaults to False.
     """
@@ -75,9 +75,9 @@ def register_liveness_probe(
 
 
 def register_readiness_probe(
-    app: FastAPI, instance: Any, route: str = "/healthz/readiness", use_default: bool = False
+    app: FastAPI, instance: Any, route: str = "/readyz", use_default: bool = False
 ) -> None:
-    """Registers /healthz/readiness endpoint.
+    """Registers /readyz endpoint.
 
     If a method decorated with @readiness is found, uses that.
     Otherwise, if use_default is True, uses a default check that always returns 200.
@@ -87,7 +87,7 @@ def register_readiness_probe(
         app (FastAPI): The FastAPI application to register the readiness route on.
         instance (Any): The service or component instance to inspect for a @readiness-decorated method.
         route (str, optional): The URL path to register the readiness endpoint under.
-                               Defaults to "/healthz/readiness".
+                               Defaults to "/readyz".
         use_default (bool, optional): Whether to use default health check if no decorated method is found.
                                     Defaults to False.
     """

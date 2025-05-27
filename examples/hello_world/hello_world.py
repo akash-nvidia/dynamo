@@ -20,7 +20,7 @@ from pydantic import BaseModel
 
 from dynamo.runtime.logging import configure_dynamo_logging
 from dynamo.sdk import DYNAMO_IMAGE, api, depends, endpoint, service
-from dynamo.sdk.core.lib import liveness
+from dynamo.sdk.core.lib import liveness, readiness
 from dynamo.sdk.lib.config import ServiceConfig
 
 logger = logging.getLogger(__name__)
@@ -118,27 +118,20 @@ class Frontend:
     def __init__(self) -> None:
         # Configure logging
         configure_dynamo_logging(service_name="Frontend")
-
         logger.info("Starting frontend")
         config = ServiceConfig.get_instance()
         self.message = config.get("Frontend", {}).get("message", "front")
         self.port = config.get("Frontend", {}).get("port", 8000)
         logger.info(f"Frontend config message: {self.message}")
         logger.info(f"Frontend config port: {self.port}")
-
-    # Dummy endpoint to check if we can serve both concurrently
-    @endpoint()
-    async def generate(self, req: RequestType):
-        """Forward requests to backend."""
-        yield f"Response 1"
-        yield f"Response 2"
-        yield f"Response 3"
+        self.count = 0
 
     # alternative syntax: @endpoint(transports=[DynamoTransport.HTTP])
     @api()
-    async def generate_web(self, request: RequestType):
+    async def generate(self, request: RequestType):
         """Stream results from the pipeline."""
         logger.info(f"Frontend received: {request.text}")
+        self.count += 1
 
         async def content_generator():
             async for response in self.middle.generate(request.model_dump_json()):
@@ -148,5 +141,10 @@ class Frontend:
 
     @liveness
     def is_alive(self):
-        logger.info("Liveness probe")
-        return True
+        logger.info(f"Liveness probe: {self.count}")
+        return self.count % 2 == 0
+
+    @readiness
+    def is_ready(self):
+        logger.info(f"Readiness probe: {self.count}")
+        return self.count % 2 == 0

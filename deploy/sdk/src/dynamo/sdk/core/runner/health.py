@@ -66,7 +66,9 @@ def register_liveness_probe(
     async def liveness_check():
         try:
             # Use decorated method if available, otherwise use default
-            check_method = decorated_method if decorated_method else default_liveness_check
+            check_method = (
+                decorated_method if decorated_method else default_liveness_check
+            )
             # self needs to be bound so we need to use the instance of the inner
             result: Union[bool, Awaitable[bool]] = check_method()
             if isinstance(result, Awaitable):
@@ -110,7 +112,9 @@ def register_readiness_probe(
     async def readiness_check():
         try:
             # Use decorated method if available, otherwise use default
-            check_method = decorated_method if decorated_method else default_readiness_check
+            check_method = (
+                decorated_method if decorated_method else default_readiness_check
+            )
             # self needs to be bound so we need to use the instance of the inner
             result: Union[bool, Awaitable[bool]] = check_method()
             if isinstance(result, Awaitable):
